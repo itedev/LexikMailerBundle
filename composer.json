@@ -28,9 +28,9 @@
         "twig/twig": ">=1.3.0"
     },
     "autoload":     {
-        "psr-0": { "Lexik\\Bundle\\MailerBundle": "" }
+        "psr-0": { "ITE\\Bundle\\MailerBundle": "" }
     },
-    "target-dir": "Lexik/Bundle/MailerBundle",
+    "target-dir": "ITE/Bundle/MailerBundle",
     "extra": {
         "branch-alias": {
             "dev-master": "1.3.x-dev"
