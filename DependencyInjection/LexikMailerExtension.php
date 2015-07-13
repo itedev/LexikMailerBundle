@@ -30,6 +30,8 @@ class LexikMailerExtension extends Extension
             $loader->load('sonata.xml');
         }
 
+        $container->setParameter('lexik_mailer.default_styles', $config['default_styles']);
+        $container->setParameter('lexik_mailer.error_notifications', $config['error_notifications']);
         $container->setParameter('lexik_mailer.base_layout', $config['base_layout']);
         $container->setParameter('lexik_mailer.list_items_per_page', $config['list_items_per_page']);
         $container->setParameter('lexik_mailer.admin_email', $config['admin_email']);

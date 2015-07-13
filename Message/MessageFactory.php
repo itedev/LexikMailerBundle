@@ -6,18 +6,15 @@ use Doctrine\ORM\EntityManager;
 use Lexik\Bundle\MailerBundle\Exception\ReferenceNotFoundException;
 use Lexik\Bundle\MailerBundle\Model\EmailInterface;
 use Lexik\Bundle\MailerBundle\Mapping\Driver\Annotation;
-use Lexik\Bundle\MailerBundle\Exception\NoTranslationException;
-use Lexik\Bundle\MailerBundle\Message\ReferenceNotFoundMessage;
-use Lexik\Bundle\MailerBundle\Message\NoTranslationMessage;
-use Lexik\Bundle\MailerBundle\Message\UndefinedVariableMessage;
-use Lexik\Bundle\MailerBundle\Message\TwigErrorMessage;
 use Lexik\Bundle\MailerBundle\Signer\SignerFactory;
+use Symfony\Bundle\AsseticBundle\Factory\AssetFactory;
 
 /**
  * Create some swift messages from email templates.
  *
  * @author Cédric Girard <c.girard@lexik.fr>
  * @author Yoann Aparici <y.aparici@lexik.fr>
+ * @author Alex Buturlakin <alexbuturlakin@gmail.com>
  */
 class MessageFactory
 {
@@ -52,6 +49,11 @@ class MessageFactory
     protected $signer;
 
     /**
+     * @var AssetFactory
+     */
+    private $af;
+
+    /**
      * Constructor.
      *
      * @param EntityManager                                        $entityManager
@@ -59,12 +61,14 @@ class MessageFactory
      * @param \Lexik\Bundle\MailerBundle\Mapping\Driver\Annotation $annotationDriver
      * @param array                                                $defaultOptions
      * @param SignerFactory                                        $signer
+     * @param AssetFactory                                         $af
      *
      * @internal param \Lexik\Bundle\MailerBundle\Mapping\Driver\Annotation $driver
      */
-    public function __construct(EntityManager $entityManager, MessageRenderer $renderer, Annotation $annotationDriver, $defaultOptions, SignerFactory $signer)
+    public function __construct(EntityManager $entityManager, MessageRenderer $renderer, Annotation $annotationDriver, $defaultOptions, SignerFactory $signer, AssetFactory $af)
     {
         $this->em = $entityManager;
+        $this->af = $af;
         $this->renderer = $renderer;
         $this->annotationDriver = $annotationDriver;
         $this->options = array_merge($this->getDefaultOptions(), $defaultOptions);
@@ -117,19 +121,15 @@ class MessageFactory
      * @param mixed  $to
      * @param array  $parameters
      * @param string $locale
-     *
-     * @throws \RuntimeException
+     * @param array  $styles
      *
      * @return \Swift_Message
      */
-    public function get($reference, $to, array $parameters = array(), $locale = null)
+    public function get($reference, $to, array $parameters = array(), $locale = null, array $styles = [])
     {
-        try {
-            $email = $this->getEmail($reference);
-            return $this->generateMessage($email, $to, $parameters, $locale);
-        } catch (ReferenceNotFoundException $e) {
-            return $this->generateExceptionMessage($reference);
-        }
+        $email = $this->getEmail($reference);
+
+        return $this->generateMessage($email, $to, $parameters, $locale, $styles);
     }
 
     /**
@@ -139,10 +139,11 @@ class MessageFactory
      * @param mixed          $to
      * @param array          $parameters
      * @param string         $locale
+     * @param array          $styles
      *
      * @return \Swift_Message
      */
-    public function generateMessage(EmailInterface $email, $to, array $parameters = array(), $locale = null)
+    public function generateMessage(EmailInterface $email, $to, array $parameters = array(), $locale = null, array $styles = [])
     {
         if (null === $locale) {
             $locale = $this->options['default_locale'];
@@ -158,52 +159,56 @@ class MessageFactory
             }
         }
 
-        try {
-            $email->setLocale($locale);
-            $this->renderer->loadTemplates($email);
+        $email->setLocale($locale);
+        $this->renderer->loadTemplates($email);
 
-            $message = $this->createMessageInstance()
-                            ->setSubject($this->renderTemplate('subject', $parameters, $email->getChecksum()))
-                            ->setFrom($this->renderFromAddress($email, $parameters), $this->renderTemplate('from_name', $parameters, $email->getChecksum()))
-                            ->setTo($to)
-                            ->setBody($this->renderTemplate('html_content', $parameters, $email->getChecksum()), 'text/html');
+        $message = $this->createMessageInstance()
+                        ->setSubject($this->renderTemplate('subject', $parameters, $email->getChecksum()))
+                        ->setFrom($this->renderFromAddress($email, $parameters), $this->renderTemplate('from_name', $parameters, $email->getChecksum()))
+                        ->setTo($to)
+                        ->setBody($this->renderTemplate('html_content', $parameters, $email->getChecksum()), 'text/html');
 
-            $textContent = $this->renderTemplate('text_content', $parameters, $email->getChecksum());
+        $textContent = $this->renderTemplate('text_content', $parameters, $email->getChecksum());
 
-            if (null !== $textContent && '' !== $textContent) {
-                $message->addPart($textContent, 'text/plain');
-            }
+        if (null !== $textContent && '' !== $textContent) {
+            $message->addPart($textContent, 'text/plain');
+        }
 
-            foreach ($email->getBccs() as $bcc) {
-                $message->addBcc($bcc);
-            }
+        foreach ($email->getBccs() as $bcc) {
+            $message->addBcc($bcc);
+        }
 
-            if (count($email->getHeaders()) > 0) {
-                $headers = $message->getHeaders();
-                foreach ($email->getHeaders() as $header) {
-                    if (is_array($header) && isset($header['key'], $header['value'])) {
-                        $headers->addTextHeader($header['key'], $header['value']);
-                    }
+        if (count($email->getHeaders()) > 0) {
+            $headers = $message->getHeaders();
+            foreach ($email->getHeaders() as $header) {
+                if (is_array($header) && isset($header['key'], $header['value'])) {
+                    $headers->addTextHeader($header['key'], $header['value']);
                 }
             }
+        }
 
-        } catch (NoTranslationException $e) {
-            $message = new NoTranslationMessage($email->getReference(), $locale);
-            $message->setFrom($this->options['admin_email']);
-            $message->setTo($this->options['admin_email']);
-
-        } catch (\Twig_Error_Runtime $e) {
-            $message = new UndefinedVariableMessage($e->getMessage(), $email->getReference());
-            $message->setFrom($this->options['admin_email']);
-            $message->setTo($this->options['admin_email']);
-
-        } catch (\Twig_Error $e) {
-            $message = new TwigErrorMessage($e->getRawMessage(), $email->getReference());
-            $message->setFrom($this->options['admin_email']);
-            $message->setTo($this->options['admin_email']);
+        if(!empty($styles)) {
+            $this->addStyles($message, $styles);
         }
 
         return $message;
+    }
+
+    /**
+     * Add styles to message.
+     *
+     * @param \Swift_Message $message
+     * @param array          $styles
+     */
+    protected function addStyles(\Swift_Message $message, $styles)
+    {
+        $body = $message->getBody();
+        $css  = $this->af->createAsset($styles)->dump();
+        $processor = new CssToInlineStyles($body, $css);
+
+        // process & restore encoded variables in href's
+        $html = preg_replace('/%5B(.*)%5D/', '[$1]', $processor->convert());
+        $message->setBody($html);
     }
 
     /**
@@ -219,34 +224,6 @@ class MessageFactory
         $view = sprintf('%s_%s', $view, $checksum);
 
         return $this->renderer->renderTemplate($view, $parameters);
-    }
-
-    /**
-     * Create swift message when Email is not found.
-     *
-     * @param string $reference
-     * @return ReferenceNotFoundMessage
-     */
-    protected function generateExceptionMessage($reference)
-    {
-        $traces = debug_backtrace(false);
-
-        $file = null;
-        $line = null;
-
-        foreach ($traces as $trace) {
-            if (isset($trace['function']) && $trace['function'] == 'get' && isset($trace['class']) && $trace['class'] == __CLASS__) {
-                $file = $trace['file'];
-                $line = $trace['line'];
-                break;
-            }
-        }
-
-        $message = new ReferenceNotFoundMessage($reference, $file, $line);
-        $message->setFrom($this->options['admin_email']);
-        $message->setTo($this->options['admin_email']);
-
-        return $message;
     }
 
     /**

@@ -23,8 +23,17 @@ class Configuration implements ConfigurationInterface
         $rootNode
             ->addDefaultsIfNotSet()
             ->children()
+                ->booleanNode('error_notifications')
+                    ->defaultValue(false)
+                ->end()
+
                 ->scalarNode('admin_email')
                     ->isRequired()
+                ->end()
+
+                ->arrayNode('default_styles')
+                    ->defaultValue(array())
+                    ->prototype('scalar')->end()
                 ->end()
 
                 ->scalarNode('base_layout')

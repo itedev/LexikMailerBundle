@@ -7,6 +7,8 @@
         <parameter key="lexik_mailer.default_options" type="collection">
             <parameter key="email_class">%lexik_mailer.email_entity.class%</parameter>
             <parameter key="admin_email">%lexik_mailer.admin_email%</parameter>
+            <parameter key="default_styles">%lexik_mailer.default_styles%</parameter>
+            <parameter key="error_notifications">%lexik_mailer.error_notifications%</parameter>
             <parameter key="default_locale">%locale%</parameter>
         </parameter>
         <parameter key="lexik_mailer.templating.default_options" type="collection">
@@ -22,6 +24,8 @@
             <parameter key="domain">%lexik_mailer.dkim.domain%</parameter>
             <parameter key="selector">%lexik_mailer.dkim.selector%</parameter>
         </parameter>
+
+        <parameter key="lexik_mailer.manager.mailer.class">Lexik\Bundle\MailerBundle\Manager\MailerManager</parameter>
 
         <parameter key="lexik_mailer.message_preview_penerator.class">Lexik\Bundle\MailerBundle\Tools\PreviewGenerator</parameter>
         <parameter key="lexik_mailer.simple_pager.class">Lexik\Bundle\MailerBundle\Tools\SimplePager</parameter>
@@ -40,6 +44,14 @@
         <!-- Annotation -->
         <service id="lexik_mailer.annotation_driver" class="%lexik_mailer.annotation_driver.class%" public="false">
             <argument type="service" id="annotation_reader" />
+        </service>
+
+        <!-- Managers -->
+        <service id="lexik_mailer.manager.mailer" class="%lexik_mailer.manager.mailer.class%">
+            <argument type="service" id="doctrine.orm.entity_manager" />
+            <argument type="service" id="lexik_mailer.message_factory" />
+            <argument type="service" id="mailer" />
+            <argument>%lexik_mailer.default_options%</argument>
         </service>
 
         <!-- Loader -->
