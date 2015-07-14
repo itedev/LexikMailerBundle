@@ -125,6 +125,24 @@ class MailerManager
     }
 
     /**
+     * Send email to admin.
+     *
+     * @param string      $reference
+     * @param array       $params
+     * @param null|string $locale
+     * @param array       $styles
+     */
+    public function sendAdminEmail($reference, array $params = [], $locale = null, array $styles = [])
+    {
+        $styles = $styles && !empty($styles) ? $styles : $this->config['default_styles'];
+        $locale = $locale ? $locale : $this->config['default_locale'];
+
+        $message = $this->mf->get($reference, $this->config['admin_email'], $params, $locale, $styles);
+
+        $this->mailer->send($message);
+    }
+
+    /**
      * Create swift message when Email is not found.
      *
      * @param Exception $e

@@ -8,6 +8,7 @@ use Lexik\Bundle\MailerBundle\Model\EmailInterface;
 use Lexik\Bundle\MailerBundle\Mapping\Driver\Annotation;
 use Lexik\Bundle\MailerBundle\Signer\SignerFactory;
 use Symfony\Bundle\AsseticBundle\Factory\AssetFactory;
+use TijsVerkoyen\CssToInlineStyles\CssToInlineStyles;
 
 /**
  * Create some swift messages from email templates.
