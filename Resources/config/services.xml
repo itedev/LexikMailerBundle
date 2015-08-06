@@ -51,6 +51,7 @@
             <argument type="service" id="doctrine.orm.entity_manager" />
             <argument type="service" id="lexik_mailer.message_factory" />
             <argument type="service" id="mailer" />
+            <argument type="service" id="event_dispatcher" />
             <argument>%lexik_mailer.default_options%</argument>
         </service>
 

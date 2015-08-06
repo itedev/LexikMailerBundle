@@ -8,6 +8,7 @@ namespace Lexik\Bundle\MailerBundle\Manager;
 
 use Exception;
 use Lexik\Bundle\MailerBundle\Entity\EmailLog;
+use Lexik\Bundle\MailerBundle\Event\MessageEvent;
 use Lexik\Bundle\MailerBundle\Exception\NoTranslationException;
 use Lexik\Bundle\MailerBundle\Exception\ReferenceNotFoundException;
 use Lexik\Bundle\MailerBundle\Message\DefaultErrorMessage;
@@ -19,6 +20,7 @@ use Swift_Mailer;
 use Doctrine\ORM\EntityManager;
 use Lexik\Bundle\MailerBundle\Message\MessageFactory;
 use Swift_Message;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Twig_Error;
 use Twig_Error_Runtime;
 
@@ -52,12 +54,25 @@ class MailerManager
      */
     private $config;
 
-    public function __construct(EntityManager $em, MessageFactory $mf, Swift_Mailer $mailer, array $config = [])
+    /**
+     * @var EventDispatcherInterface
+     */
+    private $dispatcher;
+
+    /**
+     * @param EntityManager            $em
+     * @param MessageFactory           $mf
+     * @param Swift_Mailer             $mailer
+     * @param EventDispatcherInterface $dispatcher
+     * @param array                    $config
+     */
+    public function __construct(EntityManager $em, MessageFactory $mf, Swift_Mailer $mailer, EventDispatcherInterface $dispatcher, array $config = [])
     {
         $this->em = $em;
         $this->mf = $mf;
         $this->mailer = $mailer;
         $this->config = $config;
+        $this->dispatcher = $dispatcher;
     }
 
     /**
@@ -85,7 +100,13 @@ class MailerManager
                 $message->setFrom($from);
             }
 
-            $this->mailer->send($message);
+            // before sent event
+            $event = new MessageEvent();
+            $event->setMessage($message);
+
+            $this->dispatcher->dispatch('lexik.before.send', $event);
+
+            $this->mailer->send($event->getMessage());
         } catch (\Exception $e) {
             $log->setErrorFromException($e);
             $log->setSuccess(false);
