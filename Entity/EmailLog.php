@@ -186,7 +186,12 @@ class EmailLog
      */
     public function setFrom($from)
     {
-        $this->from = $from;
+        if(is_array($from)) {
+            reset($from);
+            $this->from = key($from);
+        } else {
+            $this->from = $from;
+        }
     }
 
     /**
