@@ -101,6 +101,10 @@ class MailerManager
                 $message->setFrom($from);
             }
 
+            foreach($attachments as $attach) {
+                $message->attach(\Swift_Attachment::fromPath($attach));
+            }
+
             // before sent event
             $event = new MessageEvent();
             $event->setMessage($message);
