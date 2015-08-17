@@ -3,11 +3,13 @@
 namespace Lexik\Bundle\MailerBundle\Message;
 
 use Doctrine\ORM\EntityManager;
+use Lexik\Bundle\MailerBundle\Event\MessageGenerationEvent;
 use Lexik\Bundle\MailerBundle\Exception\ReferenceNotFoundException;
 use Lexik\Bundle\MailerBundle\Model\EmailInterface;
 use Lexik\Bundle\MailerBundle\Mapping\Driver\Annotation;
 use Lexik\Bundle\MailerBundle\Signer\SignerFactory;
 use Symfony\Bundle\AsseticBundle\Factory\AssetFactory;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use TijsVerkoyen\CssToInlineStyles\CssToInlineStyles;
 
 /**
@@ -55,6 +57,11 @@ class MessageFactory
     private $af;
 
     /**
+     * @var EventDispatcherInterface
+     */
+    private $dispatcher;
+
+    /**
      * Constructor.
      *
      * @param EntityManager                                        $entityManager
@@ -63,10 +70,11 @@ class MessageFactory
      * @param array                                                $defaultOptions
      * @param SignerFactory                                        $signer
      * @param AssetFactory                                         $af
+     * @param EventDispatcherInterface                             $dispatcher
      *
      * @internal param \Lexik\Bundle\MailerBundle\Mapping\Driver\Annotation $driver
      */
-    public function __construct(EntityManager $entityManager, MessageRenderer $renderer, Annotation $annotationDriver, $defaultOptions, SignerFactory $signer, AssetFactory $af)
+    public function __construct(EntityManager $entityManager, MessageRenderer $renderer, Annotation $annotationDriver, $defaultOptions, SignerFactory $signer, AssetFactory $af, EventDispatcherInterface $dispatcher)
     {
         $this->em = $entityManager;
         $this->af = $af;
@@ -75,6 +83,7 @@ class MessageFactory
         $this->options = array_merge($this->getDefaultOptions(), $defaultOptions);
         $this->emails = array();
         $this->signer = $signer;
+        $this->dispatcher = $dispatcher;
     }
 
     /**
@@ -130,7 +139,10 @@ class MessageFactory
     {
         $email = $this->getEmail($reference);
 
-        return $this->generateMessage($email, $to, $parameters, $locale, $styles);
+        $event = new MessageGenerationEvent($email, $parameters, $locale, $styles);
+        $this->dispatcher->dispatch('lexik.message.generation', $event);
+
+        return $this->generateMessage($email, $to, $event->getParameters(), $event->getLocale(), $event->getStyles());
     }
 
     /**
