@@ -80,14 +80,15 @@ class MailerManager
      *
      * @param string $reference
      * @param string $to
-     * @param array  $params
+     * @param array $params
      * @param string $from
-     * @param array  $styles
+     * @param array $styles
      * @param string $locale
+     * @param array $attachments
      *
      * @return bool
      */
-    public function sendEmail($reference, $to, $params, $from = null, array $styles = [], $locale = null)
+    public function sendEmail($reference, $to, $params, $from = null, array $styles = [], $locale = null, array $attachments = [])
     {
         $styles = $styles && !empty($styles) ? $styles : $this->config['default_styles'];
         $locale = $locale ? $locale : $this->config['default_locale'];
