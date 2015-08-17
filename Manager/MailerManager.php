@@ -145,7 +145,13 @@ class MailerManager
         $message->setFrom($adminEmail);
         $message->setTo($adminEmail);
 
-        $this->mailer->send($message);
+        // before sent event
+        $event = new MessageEvent();
+        $event->setMessage($message);
+
+        $this->dispatcher->dispatch('lexik.before.send', $event);
+
+        $this->mailer->send($event->getMessage());
 
         return $message;
     }
