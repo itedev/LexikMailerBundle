@@ -10,7 +10,7 @@ use Symfony\Component\EventDispatcher\Event;
 use \Swift_Message as Message;
 
 /**
- * Class BeforeSendEvent
+ * Class MessageEvent
  *
  * @package Lexik\Bundle\MailerBundle\Event
  *

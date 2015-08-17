@@ -99,6 +99,7 @@
             <argument>%lexik_mailer.default_options%</argument>
             <argument type="service" id="lexik_mailer.signer_factory" />
             <argument type="service" id="assetic.asset_factory" />
+            <argument type="service" id="event_dispatcher" />
         </service>
 
         <!-- Signer -->
